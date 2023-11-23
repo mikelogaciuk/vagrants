@@ -56,7 +56,7 @@ build-iPhoneSimulator/
 # .rubocop-https?--*
 
 # Block .idea
-.idea/**/*
+.idea
 
 # All .vagrant folders
-./*/.vagrant/
+.vagrant

@@ -1,0 +1,67 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://vagrantcloud.com/search.
+
+  # Main VM Config
+  config.vm.define "k3s" do |machine|
+    machine.vm.box = "bento/ubuntu-22.04"
+    machine.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 443, host: 8443, host_ip: "127.0.0.1"
+
+    # Kubernetes ports
+    machine.vm.network "forwarded_port", guest: 6443, host: 6443, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 2379, host: 2379, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 2380, host: 2380, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 10250, host: 10250, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 10257, host: 10257, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 10259, host: 10259, host_ip: "127.0.0.1"
+    (30000...32767).each do |port|
+      machine.vm.network "forwarded_port", guest: port, host: port, host_ip: "127.0.0.1"
+    end
+
+    # Folder sync
+    machine.vm.synced_folder ".", "/vagrant", disabled: true
+
+    # View the documentation for the provider you are using for more
+    # information on available options.
+
+    # Libvirt part
+    machine.vm.provider :libvirt do |libvirt|
+      libvirt.driver = "kvm"
+      libvirt.cpu_model = "EPYC-Milan"
+      libvirt.cpus = 48
+      libvirt.memory = 20480
+      libvirt.storage_pool_name = "kvm"
+      libvirt.storage_pool_path = "/home/${USER}/images"
+      libvirt.storage :file, :size => '40G'
+    end
+
+    # Enable provisioning with a shell script. Additional provisioners such as
+    # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
+    # documentation for more information about their specific syntax and use.
+    machine.vm.provision "shell", inline: <<-SHELL
+    apt-get update
+    apt-get install apt-transport-https ca-certificates curl btop htop git unzip wget curl build-essential gcc -y
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+    export PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    sudo apt-get install -y kubectl
+    curl -sfL https://get.k3s.io | sh -
+    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+    sudo chmod +r /etc/rancher/k3s/k3s.yaml
+    kubectl get pods -A
+  SHELL
+  end
+end

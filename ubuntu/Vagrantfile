@@ -1,0 +1,48 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://vagrantcloud.com/search.
+
+  # Main VM Config
+  config.vm.define "ubuntu" do |machine|
+    machine.vm.box = "bento/ubuntu-22.04"
+    machine.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 443, host: 8443, host_ip: "127.0.0.1"
+
+    # Folder sync
+    machine.vm.synced_folder ".", "/vagrant", disabled: true
+
+    # View the documentation for the provider you are using for more
+    # information on available options.
+
+    # Libvirt part
+    machine.vm.provider :libvirt do |libvirt|
+      libvirt.driver = "kvm"
+      libvirt.cpu_model = "Icelake-Server"
+      libvirt.cpus = 2
+      libvirt.memory = 2048
+      libvirt.storage_pool_name = "kvm"
+      libvirt.storage :file, :size => '20G'
+    end
+
+    # Enable provisioning with a shell script. Additional provisioners such as
+    # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
+    # documentation for more information about their specific syntax and use.
+    machine.vm.provision "shell", inline: <<-SHELL
+    apt-get update
+    apt-get install apt-transport-https ca-certificates curl btop htop git unzip wget curl build-essential gcc -y
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+    export PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
+  SHELL
+  end
+end
