@@ -57,3 +57,6 @@ build-iPhoneSimulator/
 
 # Block .idea
 .idea/**/*
+
+# All .vagrant folders
+./*/.vagrant/
