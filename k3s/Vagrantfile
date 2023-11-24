@@ -39,11 +39,10 @@ Vagrant.configure("2") do |config|
     # Libvirt part
     machine.vm.provider :libvirt do |libvirt|
       libvirt.driver = "kvm"
-      libvirt.cpu_model = "EPYC-Milan"
-      libvirt.cpus = 48
-      libvirt.memory = 20480
+      libvirt.cpu_model = "EPYC-Rome"
+      libvirt.cpus = 20
+      libvirt.memory = 4048
       libvirt.storage_pool_name = "kvm"
-      libvirt.storage_pool_path = "/home/${USER}/images"
       libvirt.storage :file, :size => '40G'
     end
 
