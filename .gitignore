@@ -60,3 +60,5 @@ build-iPhoneSimulator/
 
 # All .vagrant folders
 .vagrant
+node-token
+kubeconfig.yaml
