@@ -1,0 +1,13 @@
+
+desc "Clean up old folders"
+task :destroy do
+  sh "vagrant destroy -f"
+  sh "rm -rf .vagrant"
+  sh "rm -rf kubeconfig.yaml"
+  sh "rm -rf node-token"
+  sh "rm -rf node1_ready"
+  sh "rm -rf node2_ready"
+  sh "rm -rf node3_ready"
+
+  puts "Cleaning up old folders"
+end
