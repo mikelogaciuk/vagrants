@@ -32,8 +32,8 @@ Vagrant.configure("2") do |config|
       machine.vm.network "forwarded_port", guest: port, host: port, host_ip: "127.0.0.1"
     end
 
-    # Folder sync
-    machine.vm.synced_folder ".", "/vagrant", disabled: true
+      # Folder sync
+      node.vm.synced_folder ".", "/vagrant", type: "nfs", nfs_version: 4, nfs_udp: false
 
     # View the documentation for the provider you are using for more
     # information on available options.
@@ -42,8 +42,8 @@ Vagrant.configure("2") do |config|
     machine.vm.provider :libvirt do |libvirt|
       libvirt.driver = "kvm"
       libvirt.cpu_model = "EPYC-Rome"
-      libvirt.cpus = 24
-      libvirt.memory = 10240
+      libvirt.cpus = 2
+      libvirt.memory = 4096
       libvirt.storage_pool_name = "kvm"
       libvirt.storage :file, :size => '40G'
     end
@@ -53,12 +53,10 @@ Vagrant.configure("2") do |config|
     # documentation for more information about their specific syntax and use.
     machine.vm.provision "shell", inline: <<-SHELL
     apt-get update
-    apt-get install apt-transport-https ca-certificates btop htop git unzip wget curl build-essential gcc -y
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-    export PATH="/home/linuxbrew/.linuxbrew/bin:${PATH}"
-    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-    echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
-    sudo apt-get install -y kubectl
+    apt-get install apt-transport-https ca-certificates curl btop htop git unzip wget curl -y
+    sudo swapoff -a
+    swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab
+    sudo snap install helm --classic && sudo snap install kubectl --classic
     curl -sfL https://get.k3s.io | sh -
     export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
     sudo chmod +r /etc/rancher/k3s/k3s.yaml
