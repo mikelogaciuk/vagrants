@@ -1,0 +1,82 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://vagrantcloud.com/search.
+
+  # Main VM Config
+  config.vm.define "rke2" do |machine|
+    machine.vm.box = "bento/ubuntu-22.04"
+    machine.vm.network "private_network", ip: "192.168.33.189"
+
+    # Classic 80/443 ports
+    machine.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 443, host: 8443, host_ip: "127.0.0.1"
+
+    # Kubernetes ports
+    machine.vm.network "forwarded_port", guest: 6443, host: 6443, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 2379, host: 2379, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 2380, host: 2380, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 10250, host: 10250, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 10257, host: 10257, host_ip: "127.0.0.1"
+    machine.vm.network "forwarded_port", guest: 10259, host: 10259, host_ip: "127.0.0.1"
+    (30000...32767).each do |port|
+      machine.vm.network "forwarded_port", guest: port, host: port, host_ip: "127.0.0.1"
+    end
+
+    # Folder sync
+    machine.vm.synced_folder ".", "/vagrant", type: "nfs", nfs_version: 4, nfs_udp: false
+
+    # View the documentation for the provider you are using for more
+    # information on available options.
+
+    # Libvirt part
+    machine.vm.provider :libvirt do |libvirt|
+      libvirt.driver = "kvm"
+      libvirt.cpu_model = "EPYC-Rome"
+      libvirt.cpus = 2
+      libvirt.memory = 4096
+      libvirt.storage_pool_name = "kvm"
+      libvirt.storage :file, :size => '40G'
+    end
+
+    # Enable provisioning with a shell script. Additional provisioners such as
+    # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
+    # documentation for more information about their specific syntax and use.
+    machine.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      apt-get install apt-transport-https ca-certificates curl btop htop git unzip wget curl -y
+      sudo swapoff -a
+      swapoff -a && sudo sed -i '/ swap / s/^/#/' /etc/fstab
+      sudo snap install helm --classic && sudo snap install kubectl --classic
+
+      # Install RKE2 server
+      curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE="server" sh -
+
+      # Start RKE2 server
+      systemctl enable rke2-server.service
+      systemctl start rke2-server.service
+
+      # Write the token to a file
+      mkdir -p /vagrant
+      cat /var/lib/rancher/rke2/server/node-token > /vagrant/node-token
+
+      cp /etc/rancher/rke2/rke2.yaml /vagrant/kubeconfig.yaml
+
+      # Set the KUBECONFIG environment variable for all users
+      sudo chmod +r /etc/rancher/rke2/rke2.yaml
+      echo "export KUBECONFIG=/etc/rancher/rke2/rke2.yaml" >> /home/vagrant/.bashrc
+
+      echo '1' > /vagrant/node1_ready
+    SHELL
+  end
+end

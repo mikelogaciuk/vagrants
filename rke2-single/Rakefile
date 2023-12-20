@@ -1,0 +1,50 @@
+require 'yaml'
+require 'fileutils'
+
+def get_actual_dir
+  File.dirname(File.expand_path(__FILE__))
+end
+
+def get_user
+  %x(whoami).strip
+end
+
+def get_node_int_i
+  %x('vagrant ssh )
+end
+
+username = get_user
+kube_config_path = "home/#{username}/.kube/config/"
+vagrant_kube_config_path = "#{get_actual_dir}/kubeconfig.yaml"
+
+desc "Clean up old folders"
+task :destroy do
+  %x("vagrant destroy -f")
+  %x("rm -rf .vagrant")
+  %x("rm -rf kubeconfig.yaml")
+  %x("rm -rf node-token")
+  %x("rm -rf node1_ready")
+  puts "Cleaning up old folders"
+end
+
+desc "Config management"
+namespace :config do
+  desc "Use RKE2 Kubeconfig"
+  task :vagrant do
+    file = File.read('kubeconfig.yaml')
+    data = YAML.load(file)
+    data['clusters'][0]['cluster']['server'] = 'https://192.168.33.189:6443'
+    YAML.dump(data, File.open('kubeconfig.yaml', 'w'))
+
+    %x(echo "export KUBECONFIG=#{vagrant_kube_config_path}" >> ~/.bashrc)
+    %x(echo "export KUBECONFIG=#{vagrant_kube_config_path}" >> ~/.zshrc)
+    puts "Using RKE2 Kubeconfig. Type 'source ~/.bashrc' or '.zshrc' to apply changes."
+  end
+  desc "Use original Kubeconfig"
+  task :original do
+    %x(echo "export KUBECONFIG=#{kube_config_path}" >> ~/.bashrc)
+    %x(echo "export KUBECONFIG=#{kube_config_path}" >> ~/.zshrc)
+    puts "Using RKE2 Kubeconfig. Type 'source ~/.bashrc' or '.zshrc' to apply changes."
+    puts "Using original Kubeconfig"
+  end
+end
